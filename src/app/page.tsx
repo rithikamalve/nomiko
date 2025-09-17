@@ -1,3 +1,9 @@
+import { NomikoApp } from '@/components/nomiko-app';
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <NomikoApp />
+    </main>
+  );
 }

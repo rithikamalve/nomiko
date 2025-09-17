@@ -6,6 +6,7 @@ import { flagRiskyClauses } from '@/ai/flows/flag-risky-clauses';
 import { simulateScenario } from '@/ai/flows/simulate-scenarios';
 import { suggestNegotiations } from '@/ai/flows/suggest-negotiations';
 import { summarizeClause } from '@/ai/flows/summarize-clause';
+import { extractTextFromDocument } from '@/ai/flows/extract-text-from-document';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +46,8 @@ import {
   Search,
   Sparkles,
   User,
+  UploadCloud,
+  FileCheck2,
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Logo } from './icons';
@@ -54,18 +57,43 @@ export function NomikoApp() {
   const [documentDetails, setDocumentDetails] = useState<DocumentDetails | null>(null);
   const [clauses, setClauses] = useState<Clause[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Analyzing Your Document...');
   const { toast } = useToast();
 
-  const handleAnalyze = async (details: DocumentDetails) => {
+  const handleAnalyze = async (details: Omit<DocumentDetails, 'text'> & { file: File }) => {
     setIsLoading(true);
     try {
-      const results = await flagRiskyClauses({ documentText: details.text });
-      const clausesWithIds = results.map((c, index) => ({
-        ...c,
-        id: crypto.randomUUID(),
-      }));
-      setClauses(clausesWithIds);
-      setDocumentDetails(details);
+      setLoadingMessage('Extracting text from your document...');
+      const reader = new FileReader();
+      reader.readAsDataURL(details.file);
+      reader.onload = async (e) => {
+        try {
+          if (!e.target?.result) {
+            throw new Error('Could not read file.');
+          }
+          const fileDataUri = e.target.result as string;
+          const { text } = await extractTextFromDocument({ fileDataUri });
+
+          const fullDetails = { ...details, text };
+
+          setLoadingMessage('Analyzing Your Document...');
+          const results = await flagRiskyClauses({ documentText: text });
+          const clausesWithIds = results.map((c, index) => ({
+            ...c,
+            id: crypto.randomUUID(),
+          }));
+          setClauses(clausesWithIds);
+          setDocumentDetails(fullDetails);
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Analysis Failed',
+            description: 'Could not analyze the document. Please try again.',
+          });
+          setIsLoading(false);
+        }
+      };
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({
@@ -73,21 +101,23 @@ export function NomikoApp() {
         title: 'Analysis Failed',
         description: 'Could not analyze the document. Please try again.',
       });
-    } finally {
       setIsLoading(false);
+    } finally {
+      // Don't set loading to false here, it's handled in the onload callback
     }
   };
 
   const handleReset = () => {
     setDocumentDetails(null);
     setClauses([]);
+    setIsLoading(false);
   };
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center">
         <Loader2 className="w-16 h-16 animate-spin text-primary mb-4" />
-        <h1 className="text-2xl font-headline font-bold">Analyzing Your Document...</h1>
+        <h1 className="text-2xl font-headline font-bold">{loadingMessage}</h1>
         <p className="text-muted-foreground">The AI is reading every clause, please wait a moment.</p>
       </div>
     );
@@ -101,16 +131,23 @@ export function NomikoApp() {
 }
 
 // Document Upload View
-function DocumentUpload({ onAnalyze }: { onAnalyze: (details: DocumentDetails) => void }) {
-  const [text, setText] = useState('');
+function DocumentUpload({ onAnalyze }: { onAnalyze: (details: Omit<DocumentDetails, 'text'> & { file: File }) => void }) {
+  const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState('rental');
   const [profile, setProfile] = useState('tenant');
   const [jurisdiction, setJurisdiction] = useState('Maharashtra');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    onAnalyze({ text, type, profile, jurisdiction });
+    if (!file) return;
+    onAnalyze({ file, type, profile, jurisdiction });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+    }
   };
 
   const indianJurisdictions = [
@@ -173,17 +210,30 @@ function DocumentUpload({ onAnalyze }: { onAnalyze: (details: DocumentDetails) =
           <CardHeader>
             <CardTitle>Analyze Your Document</CardTitle>
             <CardDescription>
-              Paste your document text below. We&apos;ll break it down clause-by-clause.
+              Upload a PDF or DOCX file. We&apos;ll break it down clause-by-clause.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Textarea
-              placeholder="Paste the full text of your rental agreement, terms of service, or other contract here..."
-              className="min-h-[250px] text-base"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              required
-            />
+            <div className="flex items-center justify-center w-full">
+              <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-64 border-2 border-border border-dashed rounded-lg cursor-pointer bg-background hover:bg-accent/10">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {file ? (
+                    <>
+                      <FileCheck2 className="w-10 h-10 mb-3 text-green-500" />
+                      <p className="mb-2 text-sm font-semibold text-foreground">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">Click to change file</p>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
+                      <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                      <p className="text-xs text-muted-foreground">PDF or DOCX (MAX. 5MB)</p>
+                    </>
+                  )}
+                </div>
+                <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.docx" />
+              </label>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="doc-type">Document Type</Label>
@@ -231,7 +281,7 @@ function DocumentUpload({ onAnalyze }: { onAnalyze: (details: DocumentDetails) =
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" size="lg" className="w-full md:w-auto">
+            <Button type="submit" size="lg" className="w-full md:w-auto" disabled={!file}>
               Analyze Document <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardFooter>
@@ -465,14 +515,15 @@ function ClauseDetails({ clause, documentDetails }: { clause?: Clause, documentD
 function AnalysisTab<T>({ contentLoader, formatter }: { contentLoader: () => Promise<T>, formatter: (data: T) => React.ReactNode }) {
     const [data, setData] = useState<T | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const memoizedContentLoader = React.useCallback(contentLoader, [contentLoader]);
   
     useEffect(() => {
       setIsLoading(true);
-      contentLoader()
+      memoizedContentLoader()
         .then(setData)
         .catch(console.error)
         .finally(() => setIsLoading(false));
-    }, [contentLoader]);
+    }, [memoizedContentLoader]);
   
     if (isLoading) {
       return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span>Analyzing...</span></div>;

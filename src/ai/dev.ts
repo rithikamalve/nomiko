@@ -7,3 +7,4 @@ import '@/ai/flows/simulate-scenarios.ts';
 import '@/ai/flows/compare-to-standards.ts';
 import '@/ai/flows/suggest-negotiations.ts';
 import '@/ai/flows/summarize-clause.ts';
+import '@/ai/flows/extract-text-from-document.ts';

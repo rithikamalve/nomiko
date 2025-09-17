@@ -17,4 +17,5 @@ export type DocumentDetails = {
   type: string;
   profile: string;
   jurisdiction: string;
+  file: File;
 };

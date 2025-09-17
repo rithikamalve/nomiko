@@ -55,7 +55,7 @@ For each clause you identify from the document:
 Document Text:
 {{{documentText}}}
 
-Output a single JSON array containing objects for every clause in the document.
+IMPORTANT: Your response MUST be a single, valid JSON array containing objects for every clause in the document. Do not include any text or formatting before or after the JSON array.
 
 Example output for a document with two clauses, one risky and one not:
 [

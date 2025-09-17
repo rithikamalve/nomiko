@@ -5,13 +5,13 @@
  *
  * - extractTextFromDocument - A function that extracts text from a document file.
  * - ExtractTextFromDocumentInput - The input type for the extractTextFromDocument function.
- * - ExtractTextFromDocumentOutput - The return type for the extractTextFromDocument function.
+ * - ExtractTextFromDocumentOutput - The return type for the extractTextFromDocumentOutput function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import mammoth from 'mammoth';
-import pdf from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 const ExtractTextFromDocumentInputSchema = z.object({
   fileDataUri: z

@@ -78,20 +78,15 @@ export function NomikoApp() {
   
         setLoadingMessage('Analyzing Your Document...');
   
-        const {stream} = await flagRiskyClauses({ documentText: text });
-        let firstClauseSet = false;
-        for await (const clause of stream()) {
-          setClauses(prevClauses => {
-            const newClauses = [
-              ...prevClauses,
-              { ...clause, id: crypto.randomUUID() },
-            ];
-            if (!firstClauseSet && clause.riskAssessment) {
-              firstClauseSet = true;
-            }
-            return newClauses;
-          });
-        }
+        const analysisResults = await flagRiskyClauses({ documentText: text });
+        
+        const clausesWithIds = analysisResults.map(clause => ({
+          ...clause,
+          id: crypto.randomUUID(),
+        }));
+        
+        setClauses(clausesWithIds);
+        
       } catch (error) {
         console.error('Analysis failed:', error);
         toast({
@@ -120,7 +115,7 @@ export function NomikoApp() {
     setIsLoading(false);
   };
 
-  if (isLoading && clauses.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center">
         <Loader2 className="w-16 h-16 animate-spin text-primary mb-4" />

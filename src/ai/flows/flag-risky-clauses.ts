@@ -39,23 +39,38 @@ export async function flagRiskyClauses(input: FlagRiskyClausesInput) {
 const flagRiskyClausesPrompt = ai.definePrompt({
   name: 'flagRiskyClausesPrompt',
   input: {schema: FlagRiskyClausesInputSchema},
-  output: {schema: ClauseAnalysisSchema, json: true},
-  prompt: `You are an expert legal analyst specializing in identifying potentially risky clauses in various types of documents (e.g., rental agreements, loan agreements, service agreements, terms of service).  Review the document text provided and identify any clauses that could be unfavorable or pose a risk to the user. For each potentially risky clause, provide a risk score (🟢 Low, 🟡 Medium, or 🔴 High) and a rationale for why the clause is considered risky. If a clause isn't risky, do not provide any assessment for it.
+  output: {schema: FlagRiskyClausesOutputSchema, json: true},
+  prompt: `You are an expert legal analyst. Your first task is to act as an OCR/NER system. Read the following document text and split it into a structured list of every individual clause.
+
+Once you have the list of clauses, your second task is to analyze each clause to identify if it is potentially unfavorable or poses a risk to the user.
+
+For each clause you identify from the document:
+1.  Include the full, original text of the clause in the 'clauseText' field.
+2.  If a clause is risky, add a 'riskAssessment' object with:
+    - 'isRisky': true
+    - 'riskScore': '🟢 Low', '🟡 Medium', or '🔴 High'.
+    - 'rationale': A brief explanation of the risk.
+3.  If a clause is standard and not risky, DO NOT include the 'riskAssessment' object.
 
 Document Text:
 {{{documentText}}}
 
-Output the analysis as a JSON object for each clause from the document. Include the original clause text and, if applicable, the risk assessment (isRisky, riskScore, rationale). If the clause is not risky, do not include a risk assessment.
+Output a single JSON array containing objects for every clause in the document.
 
-Example:
-{
-  "clauseText": "Late payment fee of $50 if rent is not received by the 5th of the month.",
-  "riskAssessment": {
-    "isRisky": true,
-    "riskScore": "🟡 Medium",
-    "rationale": "Late fees should be reasonable and in line with local regulations. $50 may be considered high in some jurisdictions.",
+Example output for a document with two clauses, one risky and one not:
+[
+  {
+    "clauseText": "Tenant agrees to a monthly rent of $2000, due on the 1st of each month."
   },
-}
+  {
+    "clauseText": "A late fee of 10% of the monthly rent will be applied for any payment received after the 3rd of the month.",
+    "riskAssessment": {
+      "isRisky": true,
+      "riskScore": "🟡 Medium",
+      "rationale": "A 10% late fee is steep and may not be legally enforceable in all jurisdictions. A flat fee or a lower percentage is more common."
+    }
+  }
+]
 `,
 });
 
@@ -63,11 +78,10 @@ const flagRiskyClausesFlow = ai.defineFlow(
   {
     name: 'flagRiskyClausesFlow',
     inputSchema: FlagRiskyClausesInputSchema,
-    outputSchema: ClauseAnalysisSchema,
-    stream: true,
+    outputSchema: FlagRiskyClausesOutputSchema,
   },
   async input => {
-    const {stream} = await flagRiskyClausesPrompt(input);
-    return stream;
+    const {output} = await flagRiskyClausesPrompt(input);
+    return output!;
   }
 );

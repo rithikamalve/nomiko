@@ -299,8 +299,8 @@ function RiskIcon({ score }: { score?: RiskScore }) {
       return (
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger>
-              <div className="h-3 w-3 rounded-full bg-gray-300" />
+            <TooltipTrigger asChild>
+                <div><div className="h-3 w-3 rounded-full bg-gray-300" /></div>
             </TooltipTrigger>
             <TooltipContent>
               <p>No Risk Detected</p>
@@ -328,8 +328,8 @@ function RiskIcon({ score }: { score?: RiskScore }) {
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger>
-            <div className={cn('h-3 w-3 rounded-full', scoreMap[score].color)} />
+          <TooltipTrigger asChild>
+            <div><div className={cn('h-3 w-3 rounded-full', scoreMap[score].color)} /></div>
           </TooltipTrigger>
           <TooltipContent>
             <p>{scoreMap[score].text}</p>
@@ -429,11 +429,14 @@ function AnalysisDashboard({
                     {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
                   </div>
                   {clauses.map((clause) => (
-                    <button
+                    <div
                       key={clause.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedClauseId(clause.id)}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setSelectedClauseId(clause.id)}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border transition-all',
+                        'w-full text-left p-3 rounded-lg border transition-all cursor-pointer',
                         'hover:bg-accent/50 hover:border-accent',
                         selectedClauseId === clause.id
                           ? 'bg-accent/20 border-accent shadow-sm'
@@ -444,7 +447,7 @@ function AnalysisDashboard({
                         <RiskIcon score={clause.riskAssessment?.riskScore} />
                         <p className="text-sm text-muted-foreground flex-1">{clause.clauseText}</p>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </ScrollArea>

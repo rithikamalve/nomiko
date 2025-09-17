@@ -78,9 +78,9 @@ export function NomikoApp() {
   
         setLoadingMessage('Analyzing Your Document...');
   
-        const stream = await flagRiskyClauses({ documentText: text });
+        const {stream} = await flagRiskyClauses({ documentText: text });
         let firstClauseSet = false;
-        for await (const clause of stream) {
+        for await (const clause of stream()) {
           setClauses(prevClauses => {
             const newClauses = [
               ...prevClauses,

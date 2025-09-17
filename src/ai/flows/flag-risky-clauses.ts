@@ -33,8 +33,7 @@ const FlagRiskyClausesOutputSchema = z.array(ClauseAnalysisSchema);
 export type FlagRiskyClausesOutput = z.infer<typeof FlagRiskyClausesOutputSchema>;
 
 export async function flagRiskyClauses(input: FlagRiskyClausesInput) {
-  const {stream} = flagRiskyClausesFlow(input);
-  return stream;
+  return flagRiskyClausesFlow(input);
 }
 
 const flagRiskyClausesPrompt = ai.definePrompt({

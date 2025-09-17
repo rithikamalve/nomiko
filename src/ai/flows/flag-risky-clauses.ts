@@ -68,6 +68,6 @@ const flagRiskyClausesFlow = ai.defineFlow(
   },
   async input => {
     const {stream} = await flagRiskyClausesPrompt(input);
-    return stream();
+    return stream;
   }
 );

@@ -62,49 +62,56 @@ export function NomikoApp() {
 
   const handleAnalyze = async (details: Omit<DocumentDetails, 'text'> & { file: File }) => {
     setIsLoading(true);
-    try {
-      setLoadingMessage('Extracting text from your document...');
-      const reader = new FileReader();
-      reader.readAsDataURL(details.file);
-      reader.onload = async (e) => {
-        try {
-          if (!e.target?.result) {
-            throw new Error('Could not read file.');
-          }
-          const fileDataUri = e.target.result as string;
-          const { text } = await extractTextFromDocument({ fileDataUri });
-
-          const fullDetails = { ...details, text };
-
-          setLoadingMessage('Analyzing Your Document...');
-          const results = await flagRiskyClauses({ documentText: text });
-          const clausesWithIds = results.map((c, index) => ({
-            ...c,
-            id: crypto.randomUUID(),
-          }));
-          setClauses(clausesWithIds);
-          setDocumentDetails(fullDetails);
-        } catch (error) {
-          console.error('Analysis failed:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Analysis Failed',
-            description: 'Could not analyze the document. Please try again.',
-          });
-          setIsLoading(false);
+    setLoadingMessage('Extracting text from your document...');
+    const reader = new FileReader();
+    reader.readAsDataURL(details.file);
+    reader.onload = async (e) => {
+      try {
+        if (!e.target?.result) {
+          throw new Error('Could not read file.');
         }
-      };
-    } catch (error) {
-      console.error('Analysis failed:', error);
+        const fileDataUri = e.target.result as string;
+        const { text } = await extractTextFromDocument({ fileDataUri });
+  
+        const fullDetails = { ...details, text };
+        setDocumentDetails(fullDetails);
+  
+        setLoadingMessage('Analyzing Your Document...');
+  
+        const stream = await flagRiskyClauses({ documentText: text });
+        let firstClauseSet = false;
+        for await (const clause of stream) {
+          setClauses(prevClauses => {
+            const newClauses = [
+              ...prevClauses,
+              { ...clause, id: crypto.randomUUID() },
+            ];
+            if (!firstClauseSet && clause.riskAssessment) {
+              firstClauseSet = true;
+            }
+            return newClauses;
+          });
+        }
+      } catch (error) {
+        console.error('Analysis failed:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Analysis Failed',
+          description: 'Could not analyze the document. Please try again.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    reader.onerror = (error) => {
+      console.error('File reading failed:', error);
       toast({
         variant: 'destructive',
-        title: 'Analysis Failed',
-        description: 'Could not analyze the document. Please try again.',
+        title: 'File Read Failed',
+        description: 'Could not read the selected file. Please try again.',
       });
       setIsLoading(false);
-    } finally {
-      // Don't set loading to false here, it's handled in the onload callback
-    }
+    };
   };
 
   const handleReset = () => {
@@ -113,7 +120,7 @@ export function NomikoApp() {
     setIsLoading(false);
   };
 
-  if (isLoading) {
+  if (isLoading && clauses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center">
         <Loader2 className="w-16 h-16 animate-spin text-primary mb-4" />
@@ -127,7 +134,7 @@ export function NomikoApp() {
     return <DocumentUpload onAnalyze={handleAnalyze} />;
   }
 
-  return <AnalysisDashboard documentDetails={documentDetails} clauses={clauses} onReset={handleReset} />;
+  return <AnalysisDashboard documentDetails={documentDetails} clauses={clauses} onReset={handleReset} isLoading={isLoading} />;
 }
 
 // Document Upload View
@@ -342,14 +349,25 @@ function AnalysisDashboard({
   documentDetails,
   clauses,
   onReset,
+  isLoading,
 }: {
   documentDetails: DocumentDetails;
   clauses: Clause[];
   onReset: () => void;
+  isLoading: boolean;
 }) {
-  const [selectedClauseId, setSelectedClauseId] = useState<string | null>(
-    clauses.find((c) => c.riskAssessment)?.id || null
-  );
+  const [selectedClauseId, setSelectedClauseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedClauseId && clauses.length > 0) {
+      const firstRiskyClause = clauses.find(c => c.riskAssessment);
+      if (firstRiskyClause) {
+        setSelectedClauseId(firstRiskyClause.id);
+      } else if (clauses.length > 0) {
+        setSelectedClauseId(clauses[0].id);
+      }
+    }
+  }, [clauses, selectedClauseId]);
 
   const selectedClause = useMemo(
     () => clauses.find((c) => c.id === selectedClauseId),
@@ -411,7 +429,10 @@ function AnalysisDashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <ScrollArea className="h-[calc(100vh-12rem)] lg:col-span-1 no-print">
                 <div className="pr-4 space-y-2">
-                  <h2 className="font-headline font-semibold text-lg p-2">Document Clauses</h2>
+                  <div className="flex justify-between items-center p-2">
+                    <h2 className="font-headline font-semibold text-lg">Document Clauses</h2>
+                    {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+                  </div>
                   {clauses.map((clause) => (
                     <button
                       key={clause.id}
@@ -519,6 +540,7 @@ function AnalysisTab<T>({ contentLoader, formatter }: { contentLoader: () => Pro
   
     useEffect(() => {
       setIsLoading(true);
+      setData(null);
       memoizedContentLoader()
         .then(setData)
         .catch(console.error)

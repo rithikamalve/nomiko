@@ -105,13 +105,52 @@ function DocumentUpload({ onAnalyze }: { onAnalyze: (details: DocumentDetails) =
   const [text, setText] = useState('');
   const [type, setType] = useState('rental');
   const [profile, setProfile] = useState('tenant');
-  const [jurisdiction, setJurisdiction] = useState('California, USA');
+  const [jurisdiction, setJurisdiction] = useState('Maharashtra');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     onAnalyze({ text, type, profile, jurisdiction });
   };
+
+  const indianJurisdictions = [
+    'Andaman and Nicobar Islands',
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chandigarh',
+    'Chhattisgarh',
+    'Dadra and Nagar Haveli and Daman and Diu',
+    'Delhi',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jammu and Kashmir',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Ladakh',
+    'Lakshadweep',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Puducherry',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+  ];
 
   return (
     <div className="container mx-auto px-4 py-12 md:py-24">
@@ -176,13 +215,18 @@ function DocumentUpload({ onAnalyze }: { onAnalyze: (details: DocumentDetails) =
               </div>
               <div>
                 <Label htmlFor="jurisdiction">Jurisdiction</Label>
-                <Input
-                  id="jurisdiction"
-                  placeholder="e.g., California, USA"
-                  value={jurisdiction}
-                  onChange={(e) => setJurisdiction(e.target.value)}
-                  required
-                />
+                <Select value={jurisdiction} onValueChange={setJurisdiction}>
+                  <SelectTrigger id="jurisdiction">
+                    <SelectValue placeholder="Select jurisdiction..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {indianJurisdictions.map((j) => (
+                      <SelectItem key={j} value={j}>
+                        {j}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>

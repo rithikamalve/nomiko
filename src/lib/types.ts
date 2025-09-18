@@ -8,10 +8,24 @@ export interface RiskAssessment {
   rationale: string;
 }
 
+export interface StandardsComparison {
+  comparison: string;
+  isStandard: boolean;
+  rationale: string;
+}
+
+export interface NegotiationSuggestion {
+  negotiationSuggestions: string[];
+  rationale: string;
+}
+
 export interface Clause {
   id: string;
   clauseText: string;
+  summary: string;
   riskAssessment?: RiskAssessment;
+  standardsComparison: StandardsComparison;
+  negotiationSuggestion: NegotiationSuggestion;
 }
 
 export type DocumentDetails = {
@@ -33,17 +47,6 @@ export interface AnswerUserQuestionOutput {
   answer: string;
 }
 
-export interface CompareToStandardsInput {
-  clause: string;
-  documentType: string;
-  jurisdiction?: string;
-}
-export interface CompareToStandardsOutput {
-  comparison: string;
-  isStandard: boolean;
-  rationale: string;
-}
-
 export interface ExtractTextFromDocumentInput {
   fileDataUri: string;
 }
@@ -53,12 +56,11 @@ export interface ExtractTextFromDocumentOutput {
 
 export interface FlagRiskyClausesInput {
   documentText: string;
+  documentType: string;
+  userProfile: string;
+  jurisdiction: string;
 }
-export type FlagRiskyClausesOutput = {
-  id: string;
-  clauseText: string;
-  riskAssessment?: RiskAssessment;
-}[];
+export type FlagRiskyClausesOutput = Clause[];
 
 
 export interface SimulateScenarioInput {
@@ -69,22 +71,4 @@ export interface SimulateScenarioOutput {
   outcome: string;
   riskLevel: RiskScore;
   rationale:string;
-}
-
-export interface SuggestNegotiationsInput {
-  clauseText: string;
-  documentType: string;
-  userProfile: string;
-  jurisdiction: string;
-}
-export interface SuggestNegotiationsOutput {
-  negotiationSuggestions: string[];
-  rationale: string;
-}
-
-export interface SummarizeClauseInput {
-  clause: string;
-}
-export interface SummarizeClauseOutput {
-  summary: string;
 }

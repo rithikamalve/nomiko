@@ -15,6 +15,9 @@ const FlagRiskyClausesInputSchema = z.object({
   documentText: z
     .string()
     .describe('The complete text of the document to analyze.'),
+  documentType: z.string(),
+  userProfile: z.string(),
+  jurisdiction: z.string(),
 });
 export type FlagRiskyClausesInput = z.infer<typeof FlagRiskyClausesInputSchema>;
 
@@ -30,11 +33,43 @@ const RiskAssessmentSchema = z.object({
     .describe('The rationale for why the clause is considered risky.'),
 });
 
+const StandardsComparisonSchema = z.object({
+  comparison: z
+    .string()
+    .describe('A comparison of the clause to regional and industry standards.'),
+  isStandard: z
+    .boolean()
+    .describe(
+      'Whether the clause is considered standard for the given document type and jurisdiction.'
+    ),
+  rationale: z
+    .string()
+    .describe(
+      'The rationale for why the clause is considered standard or not.'
+    ),
+});
+
+const NegotiationSuggestionSchema = z.object({
+  negotiationSuggestions: z
+    .array(z.string())
+    .describe('A list of negotiation suggestions.'),
+  rationale: z
+    .string()
+    .describe('The rationale behind the negotiation suggestions.'),
+});
+
 const ClauseAnalysisSchema = z.object({
   id: z.string().describe('A unique identifier for the clause.'),
   clauseText: z.string().describe('The text of the clause.'),
+  summary: z.string().describe('A plain language summary of the clause.'),
   riskAssessment: RiskAssessmentSchema.optional().describe(
     'The risk assessment for the clause, if any.'
+  ),
+  standardsComparison: StandardsComparisonSchema.describe(
+    'A comparison to industry and regional standards.'
+  ),
+  negotiationSuggestion: NegotiationSuggestionSchema.describe(
+    'Tailored negotiation advice.'
   ),
 });
 
@@ -49,23 +84,36 @@ const flagRiskyClausesPrompt = ai.definePrompt({
   name: 'flagRiskyClausesPrompt',
   input: {schema: FlagRiskyClausesInputSchema},
   output: {schema: FlagRiskyClausesOutputSchema, json: true},
-  prompt: `You are an expert legal analyst. Your first task is to act as an OCR/NER system. Read the following document text and split it into a structured list of every individual clause.
+  prompt: `You are an expert legal analyst AI. Your task is to perform a comprehensive analysis of a legal document.
 
-Once you have the list of clauses, your second task is to analyze each clause to identify if it is potentially unfavorable or poses a risk to the user.
+First, act as an OCR/NER system. Read the document text and split it into a structured list of every individual clause.
 
-For each clause you identify from the document:
-1.  Generate a unique 'id' for the clause (e.g., "clause-1", "clause-2").
-2.  Include the full, original text of the clause in the 'clauseText' field.
-3.  If a clause is risky, add a 'riskAssessment' object with:
+For each clause you identify, perform a full analysis and provide the following information:
+1.  A unique 'id' for the clause (e.g., "clause-1", "clause-2").
+2.  The full, original text of the clause in the 'clauseText' field.
+3.  A 'summary' of the clause in plain, easy-to-understand language.
+4.  A 'riskAssessment' object ONLY IF the clause is risky. This object should contain:
     - 'isRisky': true
     - 'riskScore': '🟢 Low', '🟡 Medium', or '🔴 High'.
     - 'rationale': A brief explanation of the risk.
-4.  If a clause is standard and not risky, DO NOT include the 'riskAssessment' object.
+    If a clause is standard and not risky, DO NOT include the 'riskAssessment' object.
+5.  A 'standardsComparison' object containing:
+    - 'comparison': How the clause stacks up against regional and industry standards for the given document type.
+    - 'isStandard': A boolean indicating if the clause is standard.
+    - 'rationale': The reasoning for your standards assessment.
+6.  A 'negotiationSuggestion' object containing:
+    - 'negotiationSuggestions': An array of actionable talking points or alternative phrasing to negotiate more favorable terms, tailored to the user's role.
+    - 'rationale': An explanation of why these suggestions are beneficial.
 
-Document Text:
+Context for Analysis:
+- Document Type: {{{documentType}}}
+- User's Role: {{{userProfile}}}
+- Jurisdiction: {{{jurisdiction}}}
+
+Document Text to Analyze:
 {{{documentText}}}
 
-IMPORTANT: Your response MUST be a single, valid JSON array containing objects for every clause in the document. Do not include any text or formatting before or after the JSON array.
+IMPORTANT: Your response MUST be a single, valid JSON array containing objects for every clause in the document. Do not include any text, markdown, or formatting before or after the JSON array. Each object in the array must conform to the full schema defined.
 `,
 });
 

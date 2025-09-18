@@ -25,13 +25,11 @@ const RiskAssessmentSchema = z.object({
   isRisky: z.boolean().describe('Whether the clause is potentially risky.'),
   riskScore: z
     .enum(['🟢 Low', '🟡 Medium', '🔴 High'])
-    .optional()
     .describe(
       'The risk score of the clause: 🟢 Low (Standard), 🟡 Medium (Unfavorable but negotiable), 🔴 High (High risk / predatory).'
     ),
   rationale: z
     .string()
-    .optional()
     .describe('The rationale for why the clause is considered risky.'),
 });
 
@@ -95,8 +93,8 @@ For each clause you identify, perform a full analysis and provide the following 
 2.  The full, original text of the clause in the 'clauseText' field.
 3.  A 'summary' of the clause in plain, easy-to-understand language.
 4.  A 'riskAssessment' object.
-    - If the clause is risky, this object must contain: 'isRisky': true, 'riskScore', and 'rationale'.
-    - If a clause is standard and not risky, this object must contain: 'isRisky': false.
+    - If the clause is risky (even low risk), this object must contain: 'isRisky': true, a 'riskScore' ('🟢 Low', '🟡 Medium', or '🔴 High'), and 'rationale'.
+    - If a clause is standard and not risky, this object must contain: 'isRisky': false, 'riskScore': '🟢 Low', and a 'rationale' saying "This is a standard and fair clause."
 5.  A 'standardsComparison' object containing:
     - 'comparison': How the clause stacks up against regional and industry standards for the given document type.
     - 'isStandard': A boolean indicating if the clause is standard.

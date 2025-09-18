@@ -363,7 +363,22 @@ function DocumentUpload({
 
 // Risk Indicator Icon
 function RiskIcon({ score }: { score?: RiskScore }) {
-  if (!score) {
+  const scoreMap = {
+    '🟢 Low': {
+      color: 'bg-green-500',
+      text: 'Low Risk',
+    },
+    '🟡 Medium': {
+      color: 'bg-yellow-400',
+      text: 'Medium Risk',
+    },
+    '🔴 High': {
+      color: 'bg-destructive',
+      text: 'High Risk',
+    },
+  };
+
+  if (!score || !scoreMap[score]) {
     return (
       <TooltipProvider>
         <Tooltip>
@@ -379,21 +394,6 @@ function RiskIcon({ score }: { score?: RiskScore }) {
       </TooltipProvider>
     );
   }
-
-  const scoreMap = {
-    '🟢 Low': {
-      color: 'bg-green-500',
-      text: 'Low Risk',
-    },
-    '🟡 Medium': {
-      color: 'bg-yellow-400',
-      text: 'Medium Risk',
-    },
-    '🔴 High': {
-      color: 'bg-destructive',
-      text: 'High Risk',
-    },
-  };
 
   return (
     <TooltipProvider>
@@ -485,9 +485,9 @@ function AnalysisDashboard({
                 className="p-4 border rounded-lg break-inside-avoid"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <RiskIcon score={clause.riskAssessment?.riskScore} />
+                  <RiskIcon score={clause.riskAssessment.riskScore} />
                   <h3 className="font-bold">
-                    {clause.riskAssessment?.riskScore?.substring(2)} Risk
+                    {clause.riskAssessment.riskScore?.substring(2)} Risk
                   </h3>
                 </div>
                 <p className="italic text-muted-foreground mb-2">
@@ -495,7 +495,7 @@ function AnalysisDashboard({
                 </p>
                 <p>
                   <span className="font-semibold">Rationale:</span>{' '}
-                  {clause.riskAssessment?.rationale}
+                  {clause.riskAssessment.rationale}
                 </p>
               </div>
             ))
@@ -551,7 +551,7 @@ function AnalysisDashboard({
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <RiskIcon score={clause.riskAssessment?.riskScore} />
+                        <RiskIcon score={clause.riskAssessment.riskScore} />
                         <p className="text-sm text-muted-foreground flex-1">
                           {clause.clauseText}
                         </p>
@@ -636,7 +636,7 @@ function ClauseDetails({ clause }: { clause?: Clause }) {
               <p>{clause.summary}</p>
             </TabsContent>
             <TabsContent value="risk">
-              {clause.riskAssessment?.isRisky ? (
+              {clause.riskAssessment.isRisky ? (
                 <div className="space-y-2">
                   <Badge
                     variant={getRiskBadgeVariant(clause.riskAssessment.riskScore)}

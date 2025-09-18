@@ -4,8 +4,8 @@ export type RiskScore = '🟢 Low' | '🟡 Medium' | '🔴 High';
 
 export interface RiskAssessment {
   isRisky: boolean;
-  riskScore?: RiskScore;
-  rationale?: string;
+  riskScore: RiskScore;
+  rationale: string;
 }
 
 export interface StandardsComparison {

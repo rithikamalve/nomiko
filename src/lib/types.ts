@@ -12,6 +12,10 @@ export interface Clause {
   id: string;
   clauseText: string;
   riskAssessment?: RiskAssessment;
+  summary?: string;
+  comparison?: string;
+  isStandard?: boolean;
+  negotiationSuggestions?: string[];
 }
 
 export type DocumentDetails = {
@@ -53,11 +57,11 @@ export interface ExtractTextFromDocumentOutput {
 
 export interface FlagRiskyClausesInput {
   documentText: string;
+  documentType: string;
+  userProfile: string;
+  jurisdiction: string;
 }
-export type FlagRiskyClausesOutput = {
-  clauseText: string;
-  riskAssessment?: RiskAssessment;
-}[];
+export type FlagRiskyClausesOutput = Clause[];
 
 
 export interface SimulateScenarioInput {
@@ -67,7 +71,7 @@ export interface SimulateScenarioInput {
 export interface SimulateScenarioOutput {
   outcome: string;
   riskLevel: RiskScore;
-  rationale: string;
+  rationale:string;
 }
 
 export interface SuggestNegotiationsInput {

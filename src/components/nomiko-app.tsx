@@ -6,21 +6,6 @@ import {
   type FlagRiskyClausesOutput,
 } from '@/ai/flows/flag-risky-clauses';
 import {
-  summarizeClause,
-  type SummarizeClauseInput,
-  type SummarizeClauseOutput,
-} from '@/ai/flows/summarize-clause';
-import {
-  compareToStandards,
-  type CompareToStandardsInput,
-  type CompareToStandardsOutput,
-} from '@/ai/flows/compare-to-standards';
-import {
-  suggestNegotiations,
-  type SuggestNegotiationsInput,
-  type SuggestNegotiationsOutput,
-} from '@/ai/flows/suggest-negotiations';
-import {
   answerUserQuestion,
   type AnswerUserQuestionInput,
   type AnswerUserQuestionOutput,
@@ -114,11 +99,16 @@ export function NomikoApp() {
 
         setLoadingMessage('Analyzing Your Document...');
 
-        const analysisResults = await flagRiskyClauses({ documentText: text });
+        const analysisResults = await flagRiskyClauses({
+          documentText: text,
+          documentType: fullDetails.type,
+          userProfile: fullDetails.profile,
+          jurisdiction: fullDetails.jurisdiction,
+        });
 
         const clausesWithIds = analysisResults.map((clause) => ({
           ...clause,
-          id: crypto.randomUUID(),
+          id: clause.id || crypto.randomUUID(),
         }));
 
         setClauses(clausesWithIds);
@@ -127,7 +117,8 @@ export function NomikoApp() {
         toast({
           variant: 'destructive',
           title: 'Analysis Failed',
-          description: 'Could not analyze the document. Please try again.',
+          description:
+            'Could not analyze the document. The AI model may be overloaded. Please try again later.',
         });
       } finally {
         setIsLoading(false);
@@ -645,10 +636,7 @@ function ClauseDetails({
 
           <div className="mt-4 text-sm min-h-[200px] p-4 bg-background rounded-md border">
             <TabsContent value="summary">
-              <AnalysisTab
-                contentLoader={() => summarizeClause({ clause: clause.clauseText })}
-                formatter={(data) => data.summary}
-              />
+              <p>{clause.summary || 'No summary available.'}</p>
             </TabsContent>
             <TabsContent value="risk">
               {clause.riskAssessment && (
@@ -661,99 +649,36 @@ function ClauseDetails({
               )}
             </TabsContent>
             <TabsContent value="standards">
-              <AnalysisTab
-                contentLoader={() =>
-                  compareToStandards({
-                    clause: clause.clauseText,
-                    documentType: documentDetails.type,
-                    jurisdiction: documentDetails.jurisdiction,
-                  })
-                }
-                formatter={(data) => (
-                  <div className="space-y-2">
-                    <Badge
-                      variant={data.isStandard ? 'secondary' : 'outline'}
-                    >
-                      {data.isStandard ? 'Standard' : 'Not Standard'}
-                    </Badge>
-                    <p>
-                      <span className="font-semibold">Comparison:</span>{' '}
-                      {data.comparison}
-                    </p>
-                    <p>
-                      <span className="font-semibold">Rationale:</span>{' '}
-                      {data.rationale}
-                    </p>
-                  </div>
-                )}
-              />
+              <div className="space-y-2">
+                <Badge
+                  variant={clause.isStandard ? 'secondary' : 'outline'}
+                >
+                  {clause.isStandard ? 'Standard' : 'Not Standard'}
+                </Badge>
+                <p>
+                  <span className="font-semibold">Comparison:</span>{' '}
+                  {clause.comparison || 'No comparison available.'}
+                </p>
+              </div>
             </TabsContent>
             <TabsContent value="negotiation">
-              <AnalysisTab
-                contentLoader={() =>
-                  suggestNegotiations({
-                    clauseText: clause.clauseText,
-                    documentType: documentDetails.type,
-                    userProfile: documentDetails.profile,
-                    jurisdiction: documentDetails.jurisdiction,
-                  })
-                }
-                formatter={(data) => (
-                  <div className="space-y-4">
-                    <p>{data.rationale}</p>
-                    <ul className="list-disc pl-5 space-y-2">
-                      {data.negotiationSuggestions.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
+               <div className="space-y-4">
+                    {clause.negotiationSuggestions && clause.negotiationSuggestions.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-2">
+                        {clause.negotiationSuggestions.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No specific negotiation points suggested for this clause.</p>
+                    )}
                   </div>
-                )}
-              />
             </TabsContent>
           </div>
         </Tabs>
       </CardContent>
     </Card>
   );
-}
-
-// Reusable component for loading AI content in tabs
-function AnalysisTab<T>({
-  contentLoader,
-  formatter,
-}: {
-  contentLoader: () => Promise<T>;
-  formatter: (data: T) => React.ReactNode;
-}) {
-  const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const memoizedContentLoader = React.useCallback(contentLoader, [
-    contentLoader,
-  ]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    setData(null);
-    memoizedContentLoader()
-      .then(setData)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [memoizedContentLoader]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        <span>Analyzing...</span>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <div className="text-destructive">Could not load analysis.</div>;
-  }
-
-  return <div>{formatter(data)}</div>;
 }
 
 // Q&A Panel

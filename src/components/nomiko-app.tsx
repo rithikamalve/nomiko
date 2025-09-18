@@ -596,6 +596,12 @@ function ClauseDetails({ clause }: { clause?: Clause }) {
     );
   }
 
+  const getRiskBadgeVariant = (score?: RiskScore) => {
+    if (score === '🔴 High') return 'destructive';
+    if (score === '🟡 Medium') return 'secondary';
+    return 'default';
+  };
+
   return (
     <Card className="sticky top-20 no-print">
       <CardHeader>
@@ -632,7 +638,14 @@ function ClauseDetails({ clause }: { clause?: Clause }) {
             <TabsContent value="risk">
               {clause.riskAssessment?.isRisky ? (
                 <div className="space-y-2">
-                  <Badge variant="destructive" className="text-base">
+                  <Badge
+                    variant={getRiskBadgeVariant(clause.riskAssessment.riskScore)}
+                    className={cn(
+                      'text-base',
+                      clause.riskAssessment.riskScore === '🟡 Medium' && 'bg-yellow-400 text-black',
+                      clause.riskAssessment.riskScore === '🟢 Low' && 'bg-green-500 text-white'
+                    )}
+                  >
                     {clause.riskAssessment.riskScore?.substring(2)} Risk
                   </Badge>
                   <p>{clause.riskAssessment.rationale}</p>

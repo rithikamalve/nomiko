@@ -20,6 +20,21 @@ import {
   type ExtractTextFromDocumentInput,
   type ExtractTextFromDocumentOutput,
 } from '@/ai/flows/extract-text-from-document';
+import {
+  summarizeClause,
+  type SummarizeClauseInput,
+  type SummarizeClauseOutput,
+} from '@/ai/flows/summarize-clause';
+import {
+  compareToStandards,
+  type CompareToStandardsInput,
+  type CompareToStandardsOutput,
+} from '@/ai/flows/compare-to-standards';
+import {
+  suggestNegotiations,
+  type SuggestNegotiationsInput,
+  type SuggestNegotiationsOutput,
+} from '@/ai/flows/suggest-negotiations';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,7 +80,7 @@ import {
   Sparkles,
   UploadCloud,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Logo } from './icons';
 
 // Main Application Component
@@ -97,13 +112,10 @@ export function NomikoApp() {
         const fullDetails = { ...details, text };
         setDocumentDetails(fullDetails);
 
-        setLoadingMessage('Analyzing Your Document...');
+        setLoadingMessage('Identifying clauses and assessing risks...');
 
         const analysisResults = await flagRiskyClauses({
           documentText: text,
-          documentType: fullDetails.type,
-          userProfile: fullDetails.profile,
-          jurisdiction: fullDetails.jurisdiction,
         });
 
         const clausesWithIds = analysisResults.map((clause) => ({
@@ -141,13 +153,13 @@ export function NomikoApp() {
     setIsLoading(false);
   };
 
-  if (isLoading) {
+  if (isLoading && !clauses.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center">
         <Loader2 className="w-16 h-16 animate-spin text-primary mb-4" />
         <h1 className="text-2xl font-headline font-bold">{loadingMessage}</h1>
         <p className="text-muted-foreground">
-          The AI is reading every clause, please wait a moment.
+          The AI is reading your document, please wait a moment.
         </p>
       </div>
     );
@@ -583,6 +595,61 @@ function AnalysisDashboard({
   );
 }
 
+// Reusable tab content component with async loading
+function AnalysisTab<I, O>({
+  flow,
+  input,
+  render,
+  active,
+}: {
+  flow: (input: I) => Promise<O>;
+  input: I;
+  render: (output: O) => React.ReactNode;
+  active: boolean;
+}) {
+  const [data, setData] = useState<O | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const executeFlow = useCallback(async () => {
+    if (!active || data) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await flow(input);
+      setData(result);
+    } catch (e) {
+      console.error(e);
+      setError('Could not load analysis. The AI model may be overloaded.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [active, data, flow, input]);
+
+  useEffect(() => {
+    executeFlow();
+  }, [executeFlow]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Analyzing...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <p className="text-destructive">{error}</p>;
+  }
+
+  if (data) {
+    return <>{render(data)}</>;
+  }
+
+  return null;
+}
+
 // Clause Details View
 function ClauseDetails({
   clause,
@@ -591,6 +658,8 @@ function ClauseDetails({
   clause?: Clause;
   documentDetails: DocumentDetails;
 }) {
+  const [activeTab, setActiveTab] = useState('summary');
+
   if (!clause) {
     return (
       <div className="flex flex-col items-center justify-center text-center rounded-lg border-2 border-dashed h-full min-h-[400px] p-8">
@@ -614,7 +683,11 @@ function ClauseDetails({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="summary" className="w-full">
+        <Tabs
+          defaultValue="summary"
+          className="w-full"
+          onValueChange={setActiveTab}
+        >
           <TabsList>
             <TabsTrigger value="summary">
               <Newspaper className="w-4 h-4 mr-2" />
@@ -636,7 +709,12 @@ function ClauseDetails({
 
           <div className="mt-4 text-sm min-h-[200px] p-4 bg-background rounded-md border">
             <TabsContent value="summary">
-              <p>{clause.summary || 'No summary available.'}</p>
+              <AnalysisTab<SummarizeClauseInput, SummarizeClauseOutput>
+                flow={summarizeClause}
+                input={{ clause: clause.clauseText }}
+                active={activeTab === 'summary'}
+                render={(data) => <p>{data.summary}</p>}
+              />
             </TabsContent>
             <TabsContent value="risk">
               {clause.riskAssessment && (
@@ -649,30 +727,64 @@ function ClauseDetails({
               )}
             </TabsContent>
             <TabsContent value="standards">
-              <div className="space-y-2">
-                <Badge
-                  variant={clause.isStandard ? 'secondary' : 'outline'}
-                >
-                  {clause.isStandard ? 'Standard' : 'Not Standard'}
-                </Badge>
-                <p>
-                  <span className="font-semibold">Comparison:</span>{' '}
-                  {clause.comparison || 'No comparison available.'}
-                </p>
-              </div>
+              <AnalysisTab<
+                CompareToStandardsInput,
+                CompareToStandardsOutput
+              >
+                flow={compareToStandards}
+                input={{
+                  clause: clause.clauseText,
+                  documentType: documentDetails.type,
+                  jurisdiction: documentDetails.jurisdiction,
+                }}
+                active={activeTab === 'standards'}
+                render={(data) => (
+                  <div className="space-y-2">
+                    <Badge variant={data.isStandard ? 'secondary' : 'outline'}>
+                      {data.isStandard ? 'Standard' : 'Not Standard'}
+                    </Badge>
+                    <p>
+                      <span className="font-semibold">Comparison:</span>{' '}
+                      {data.comparison}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Rationale:</span>{' '}
+                      {data.rationale}
+                    </p>
+                  </div>
+                )}
+              />
             </TabsContent>
             <TabsContent value="negotiation">
-               <div className="space-y-4">
-                    {clause.negotiationSuggestions && clause.negotiationSuggestions.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-2">
-                        {clause.negotiationSuggestions.map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
+              <AnalysisTab<
+                SuggestNegotiationsInput,
+                SuggestNegotiationsOutput
+              >
+                flow={suggestNegotiations}
+                input={{
+                  clauseText: clause.clauseText,
+                  documentType: documentDetails.type,
+                  userProfile: documentDetails.profile,
+                  jurisdiction: documentDetails.jurisdiction,
+                }}
+                active={activeTab === 'negotiation'}
+                render={(data) => (
+                  <div className="space-y-4">
+                    {data.negotiationSuggestions.length > 0 ? (
+                      <>
+                        <p>{data.rationale}</p>
+                        <ul className="list-disc pl-5 space-y-2">
+                          {data.negotiationSuggestions.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      </>
                     ) : (
                       <p>No specific negotiation points suggested for this clause.</p>
                     )}
                   </div>
+                )}
+              />
             </TabsContent>
           </div>
         </Tabs>

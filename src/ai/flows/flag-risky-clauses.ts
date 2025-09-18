@@ -25,11 +25,13 @@ const RiskAssessmentSchema = z.object({
   isRisky: z.boolean().describe('Whether the clause is potentially risky.'),
   riskScore: z
     .enum(['🟢 Low', '🟡 Medium', '🔴 High'])
+    .optional()
     .describe(
       'The risk score of the clause: 🟢 Low (Standard), 🟡 Medium (Unfavorable but negotiable), 🔴 High (High risk / predatory).'
     ),
   rationale: z
     .string()
+    .optional()
     .describe('The rationale for why the clause is considered risky.'),
 });
 
@@ -62,8 +64,8 @@ const ClauseAnalysisSchema = z.object({
   id: z.string().describe('A unique identifier for the clause.'),
   clauseText: z.string().describe('The text of the clause.'),
   summary: z.string().describe('A plain language summary of the clause.'),
-  riskAssessment: RiskAssessmentSchema.optional().describe(
-    'The risk assessment for the clause, if any.'
+  riskAssessment: RiskAssessmentSchema.describe(
+    'The risk assessment for the clause.'
   ),
   standardsComparison: StandardsComparisonSchema.describe(
     'A comparison to industry and regional standards.'
@@ -92,11 +94,9 @@ For each clause you identify, perform a full analysis and provide the following 
 1.  A unique 'id' for the clause (e.g., "clause-1", "clause-2").
 2.  The full, original text of the clause in the 'clauseText' field.
 3.  A 'summary' of the clause in plain, easy-to-understand language.
-4.  A 'riskAssessment' object ONLY IF the clause is risky. This object should contain:
-    - 'isRisky': true
-    - 'riskScore': '🟢 Low', '🟡 Medium', or '🔴 High'.
-    - 'rationale': A brief explanation of the risk.
-    If a clause is standard and not risky, DO NOT include the 'riskAssessment' object.
+4.  A 'riskAssessment' object.
+    - If the clause is risky, this object must contain: 'isRisky': true, 'riskScore', and 'rationale'.
+    - If a clause is standard and not risky, this object must contain: 'isRisky': false.
 5.  A 'standardsComparison' object containing:
     - 'comparison': How the clause stacks up against regional and industry standards for the given document type.
     - 'isStandard': A boolean indicating if the clause is standard.

@@ -62,6 +62,8 @@ import {
   Search,
   Sparkles,
   UploadCloud,
+  ShieldQuestion,
+  CheckCircle2
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Logo } from './icons';
@@ -427,7 +429,7 @@ function AnalysisDashboard({
 
   useEffect(() => {
     if (!selectedClauseId && clauses.length > 0) {
-      const firstRiskyClause = clauses.find((c) => c.riskAssessment);
+      const firstRiskyClause = clauses.find((c) => c.riskAssessment?.isRisky);
       if (firstRiskyClause) {
         setSelectedClauseId(firstRiskyClause.id);
       } else if (clauses.length > 0) {
@@ -446,7 +448,7 @@ function AnalysisDashboard({
   };
 
   const riskyClauses = useMemo(
-    () => clauses.filter((c) => c.riskAssessment),
+    () => clauses.filter((c) => c.riskAssessment?.isRisky),
     [clauses]
   );
 
@@ -485,7 +487,7 @@ function AnalysisDashboard({
                 <div className="flex items-center gap-2 mb-2">
                   <RiskIcon score={clause.riskAssessment?.riskScore} />
                   <h3 className="font-bold">
-                    {clause.riskAssessment?.riskScore.substring(2)} Risk
+                    {clause.riskAssessment?.riskScore?.substring(2)} Risk
                   </h3>
                 </div>
                 <p className="italic text-muted-foreground mb-2">
@@ -609,7 +611,7 @@ function ClauseDetails({ clause }: { clause?: Clause }) {
               <Newspaper className="w-4 h-4 mr-2" />
               Summary
             </TabsTrigger>
-            <TabsTrigger value="risk" disabled={!clause.riskAssessment}>
+            <TabsTrigger value="risk">
               <AlertCircle className="w-4 h-4 mr-2" />
               Risk
             </TabsTrigger>
@@ -628,12 +630,20 @@ function ClauseDetails({ clause }: { clause?: Clause }) {
               <p>{clause.summary}</p>
             </TabsContent>
             <TabsContent value="risk">
-              {clause.riskAssessment && (
+              {clause.riskAssessment?.isRisky ? (
                 <div className="space-y-2">
                   <Badge variant="destructive" className="text-base">
-                    {clause.riskAssessment.riskScore.substring(2)} Risk
+                    {clause.riskAssessment.riskScore?.substring(2)} Risk
                   </Badge>
                   <p>{clause.riskAssessment.rationale}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mb-2" />
+                  <h4 className="font-semibold">No significant risks detected</h4>
+                  <p className="text-muted-foreground">
+                    Our AI analysis indicates this clause is standard and poses no immediate risk.
+                  </p>
                 </div>
               )}
             </TabsContent>

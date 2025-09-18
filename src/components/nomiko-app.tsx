@@ -1,30 +1,40 @@
 'use client';
 
-import type {
-  AnswerUserQuestionInput,
-  AnswerUserQuestionOutput,
-} from '@/lib/types';
-import type {
-  CompareToStandardsInput,
-  CompareToStandardsOutput,
-} from '@/lib/types';
-import type {
-  FlagRiskyClausesInput,
-  FlagRiskyClausesOutput,
-} from '@/lib/types';
-import type {
-  SimulateScenarioInput,
-  SimulateScenarioOutput,
-} from '@/lib/types';
-import type {
-  SuggestNegotiationsInput,
-  SuggestNegotiationsOutput,
-} from '@/lib/types';
-import type { SummarizeClauseInput, SummarizeClauseOutput } from '@/lib/types';
-import type {
-  ExtractTextFromDocumentInput,
-  ExtractTextFromDocumentOutput,
-} from '@/lib/types';
+import {
+  flagRiskyClauses,
+  type FlagRiskyClausesInput,
+  type FlagRiskyClausesOutput,
+} from '@/ai/flows/flag-risky-clauses';
+import {
+  summarizeClause,
+  type SummarizeClauseInput,
+  type SummarizeClauseOutput,
+} from '@/ai/flows/summarize-clause';
+import {
+  compareToStandards,
+  type CompareToStandardsInput,
+  type CompareToStandardsOutput,
+} from '@/ai/flows/compare-to-standards';
+import {
+  suggestNegotiations,
+  type SuggestNegotiationsInput,
+  type SuggestNegotiationsOutput,
+} from '@/ai/flows/suggest-negotiations';
+import {
+  answerUserQuestion,
+  type AnswerUserQuestionInput,
+  type AnswerUserQuestionOutput,
+} from '@/ai/flows/answer-user-questions';
+import {
+  simulateScenario,
+  type SimulateScenarioInput,
+  type SimulateScenarioOutput,
+} from '@/ai/flows/simulate-scenarios';
+import {
+  extractTextFromDocument,
+  type ExtractTextFromDocumentInput,
+  type ExtractTextFromDocumentOutput,
+} from '@/ai/flows/extract-text-from-document';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -72,76 +82,6 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Logo } from './icons';
-
-async function callFirebaseFunction<T, O>(
-  flowName: string,
-  payload: T
-): Promise<O> {
-  // In a real deployed environment, you would use the actual cloud function URL
-  const functionUrl = `http://127.0.0.1:5001/${
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'demo-project'
-  }/us-central1/${flowName}`;
-
-  try {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data: payload }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Function call failed with status:', response.status, errorData);
-      throw new Error(
-        `Server error: ${errorData.error?.message || 'Unknown error'}`
-      );
-    }
-
-    const result = await response.json();
-    return result.result as O;
-  } catch (error) {
-    console.error(`Error calling ${flowName}:`, error);
-    throw error;
-  }
-}
-
-// Re-implementing the AI function calls to use the new Firebase Functions
-const answerUserQuestion = (
-  input: AnswerUserQuestionInput
-): Promise<AnswerUserQuestionOutput> =>
-  callFirebaseFunction('answerUserQuestionFlow', input);
-
-const compareToStandards = (
-  input: CompareToStandardsInput
-): Promise<CompareToStandardsOutput> =>
-  callFirebaseFunction('compareToStandardsFlow', input);
-
-const flagRiskyClauses = (
-  input: FlagRiskyClausesInput
-): Promise<FlagRiskyClausesOutput> =>
-  callFirebaseFunction('flagRiskyClausesFlow', input);
-
-const simulateScenario = (
-  input: SimulateScenarioInput
-): Promise<SimulateScenarioOutput> =>
-  callFirebaseFunction('simulateScenarioFlow', input);
-
-const suggestNegotiations = (
-  input: SuggestNegotiationsInput
-): Promise<SuggestNegotiationsOutput> =>
-  callFirebaseFunction('suggestNegotiationsFlow', input);
-
-const summarizeClause = (
-  input: SummarizeClauseInput
-): Promise<SummarizeClauseOutput> =>
-  callFirebaseFunction('summarizeClauseFlow', input);
-
-const extractTextFromDocument = (
-  input: ExtractTextFromDocumentInput
-): Promise<ExtractTextFromDocumentOutput> =>
-  callFirebaseFunction('extractTextFromDocumentFlow', input);
 
 // Main Application Component
 export function NomikoApp() {

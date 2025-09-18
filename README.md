@@ -1,5 +1,7 @@
 # Nomiko - AI-Powered Contract Analysis
 
+In Greek, "Nomikos" is derived from "nomos," meaning "law," and refers to someone learned in the law or an interpreter and teacher of the law.
+
 Nomiko is a web application designed to demystify legal documents. It leverages the power of Generative AI to analyze contracts, rental agreements, and other legal texts, translating complex jargon into plain English. With Nomiko, users can upload their documents to flag potential risks, receive negotiation guidance, and get direct answers to their questions about the contract's contents.
 
 ## Features
